@@ -1,7 +1,14 @@
 # hidden files, exluding gitattributes
 .*
 !.gitattributes
+!.env.example
 
 # data folder
 /data
 /lorawan-devices
+
+# webhook development artefacts
+api-webhook/.venv/
+api-webhook/.pytest_cache/
+api-webhook/__pycache__/
+api-webhook/**/*.py[cod]

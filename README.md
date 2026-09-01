@@ -1,10 +1,9 @@
-# ChirpStack Docker example
+# ChirpStack and XRepo LoRaWAN webhook
 
-This repository contains a skeleton to setup the [ChirpStack](https://www.chirpstack.io)
-open-source LoRaWAN Network Server (v4) using [Docker Compose](https://docs.docker.com/compose/).
-
-**Note:** Please use this `docker-compose.yml` file as a starting point for testing
-but keep in mind that for production usage it might need modifications. 
+This repository runs the [ChirpStack](https://www.chirpstack.io) open-source
+LoRaWAN Network Server (v4) together with the XRepo HTTP webhook. One Docker
+Compose project starts the LoRaWAN services and the API that persists decoded
+uplinks in the configured XRepo SQL Server database.
 
 ## Directory layout
 
@@ -13,6 +12,8 @@ but keep in mind that for production usage it might need modifications.
 * `configuration/chirpstack-gateway-bridge`: directory containing the ChirpStack Gateway Bridge configuration
 * `configuration/mosquitto`: directory containing the Mosquitto (MQTT broker) configuration
 * `configuration/postgresql/initdb/`: directory containing PostgreSQL initialization scripts
+* `api-webhook/`: FastAPI webhook and its SQL Server ODBC image definition
+* `.env.example`: non-secret template for the XRepo SQL Server connection
 
 ## Configuration
 
@@ -78,16 +79,48 @@ Please note that for this step you need to have the `make` command installed.
 
 ## Usage
 
-To start the ChirpStack simply run:
+Create the local runtime configuration and set it to the production XRepo
+database values. The `.env` file is ignored by Git and must never be
+committed:
 
 ```bash
-$ docker compose up
+cp .env.example .env
+# Edit .env with the production XRepo SQL Server connection values.
+docker compose up -d --build
+docker compose ps
 ```
 
 After all the components have been initialized and started, you should be able
-to open http://localhost:8080/ in your browser.
+to open http://localhost:8080/ in your browser. The webhook health endpoint is
+available from the Docker host only:
 
-##
+```bash
+curl --fail http://127.0.0.1:3188/health
+docker compose logs -f api-webhook
+```
+
+Stop the complete local stack with:
+
+```bash
+docker compose down
+```
+
+This command preserves the `postgresqldata` and `redisdata` volumes. Use
+`docker compose down --volumes` only when intentionally deleting ChirpStack
+data.
+
+## ChirpStack HTTP integration
+
+Create an HTTP integration for the ChirpStack application that owns the target
+device and enable the `up` event. Use this URL:
+
+```text
+http://api-webhook:8000/webhooks/lorawan
+```
+
+`api-webhook` is the Docker Compose service name. ChirpStack resolves it
+inside the Compose network, so no external Docker network, fixed IP address,
+or deploy script is required.
 
 The example includes the [ChirpStack REST API](https://github.com/chirpstack/chirpstack-rest-api).
 You should be able to access the UI by opening http://localhost:8090 in your browser.

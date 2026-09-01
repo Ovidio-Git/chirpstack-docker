@@ -76,6 +76,33 @@ services:
     volumes: 
       - ./configuration/mosquitto/config/:/mosquitto/config/
 
+  api-webhook:
+    build:
+      context: ./api-webhook
+    restart: unless-stopped
+    environment:
+      DB_HOST: ${DB_HOST:?DB_HOST is required}
+      DB_PORT: ${DB_PORT:-1433}
+      DB_USER: ${DB_USER:?DB_USER is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_DATABASE: ${DB_DATABASE:-xreports}
+      DB_DRIVER: ${DB_DRIVER:-ODBC Driver 18 for SQL Server}
+      DB_ENCRYPT: ${DB_ENCRYPT:-yes}
+      DB_TRUST_SERVER_CERTIFICATE: ${DB_TRUST_SERVER_CERTIFICATE:-no}
+      TZ: ${TZ:-America/Bogota}
+    ports:
+      - "127.0.0.1:3188:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 15s
+
 volumes:
   postgresqldata:
   redisdata:
